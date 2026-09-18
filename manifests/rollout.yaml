@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: wsc-app-rollout
+  namespace: wsc-app
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: wsc-app
+  template:
+    metadata:
+      labels:
+        app: wsc-app
+    spec:
+      containers:
+        - name: wsc-app-cnt
+          image: 076472864721.dkr.ecr.ap-northeast-2.amazonaws.com/wsc-cicd-repo:v1.0.0
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      nodeSelector:
+        dedicated: wsc-cicd
+  strategy:
+    canary:
+      steps:
+        - setWeight: 25
+        - pause:
+            duration: 1m
+        - setWeight: 50
+        - pause: {}
+        - setWeight: 100
